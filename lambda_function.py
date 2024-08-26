@@ -12,7 +12,7 @@ def lambda_handler(event, context):
 
     # Define the list of channels to monitor and keywords
     channels = event['channels'] if 'channels' in event else ['baraholka_tbi', 'tbilisio', 'tbilisiw', 'tbilisy_batumy', 'baraholka_tbilisi_home', 'avito_baraholka_tbilisi', 'tbilisi_baraxolka', 'baraholka_tbilisi_ge']
-    keywords = event['keywords'] if 'keywords' in event else ['ноутбук', 'кресло'] 
+    keywords = event['keywords'] if 'keywords' in event else ['ноутбук', 'лэптоп', "laptop"] 
     stopwords = event['stopwords'] if 'stopwords' in event else ['куплю']
 
     # Create the client
@@ -31,7 +31,7 @@ def lambda_handler(event, context):
 
         existing_messages = client.iter_messages(channel_to_forward);
         existing_message_ids = [message.id async for message in existing_messages]
-        existing_message_texts = [message.message.lower() async for message in existing_messages]
+        existing_message_texts = [message.message.lower() if message.message else None async for message in existing_messages]
         messages_to_forward = []
         message_ids = set()
         message_texts = set()
@@ -45,9 +45,10 @@ def lambda_handler(event, context):
                     # Forward the message to the specified channel
                     if message.id not in message_ids and message.id not in existing_message_ids:
                         if message.message.lower() not in message_texts and message.message.lower() not in existing_message_texts:
-                            messages_to_forward.append(message)
-                            message_ids.add(message.id)
                             message_texts.add(message.message.lower())
+                            message_ids.add(message.id)
+                            message.message += f"\nlink:\nhttps://t.me/c/{message.peer_id}/{message.id}"
+                            messages_to_forward.append(message)
 
         msg_count = len(messages_to_forward);
         await client.forward_messages(channel_to_forward, messages_to_forward)
