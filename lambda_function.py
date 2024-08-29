@@ -44,14 +44,17 @@ def lambda_handler(event, context):
                 if message.message and any(keyword in message.message.lower() for keyword in keywords) and not any(stopword in message.message.lower() for stopword in stopwords):
                     # Forward the message to the specified channel
                     if message.id not in message_ids and message.id not in existing_message_ids:
-                        if message.message.lower() not in message_texts and message.message.lower() not in existing_message_texts:
-                            message_texts.add(message.message.lower())
+                        msg = message.message.lower()
+                        if msg not in message_texts and msg not in existing_message_texts:
+                            message_texts.add(msg)
                             message_ids.add(message.id)
-                            message.message += f"\nlink:\nhttps://t.me/c/{message.peer_id}/{message.id}"
                             messages_to_forward.append(message)
 
         msg_count = len(messages_to_forward);
-        await client.forward_messages(channel_to_forward, messages_to_forward)
+        for msg in messages_to_forward:
+            linkMsg = msg.message[:100] + f"...\nlink:\nhttps://t.me/c/{msg.peer_id.channel_id}/{msg.id}"
+            await client.forward_messages(channel_to_forward, msg)
+            await client.send_message(channel_to_forward, linkMsg)
         # Disconnect the client
         await client.disconnect()
 
