@@ -45,16 +45,18 @@ def lambda_handler(event, context):
             async for message in client.iter_messages(channel, limit=100):
                 if message.message:
                     message_lower = message.message.lower()
-                    if any(keyword in message_lower for keyword in keywords) and not any(stopword in message_lower for stopword in stopwords):
+                    matched_keywords = [keyword for keyword in keywords if keyword in message_lower]
+                    if matched_keywords and not any(stopword in message_lower for stopword in stopwords):
                         if message.id not in message_ids and message.id not in existing_message_ids:
                             if message_lower not in message_texts and message_lower not in existing_message_texts:
                                 message_texts.add(message_lower)
                                 message_ids.add(message.id)
-                                messages_to_forward.append(message)
+                                messages_to_forward.append((message, matched_keywords))
 
         msg_count = len(messages_to_forward)
-        for msg in messages_to_forward:
-            link_msg = f"{msg.message[:100]}...\nlink:\nhttps://t.me/c/{msg.peer_id.channel_id}/{msg.id}"
+        for msg, matched_keywords in messages_to_forward:
+            tags = ' '.join(f'#{keyword.replace(" ", "_")}' for keyword in matched_keywords)
+            link_msg = f"{msg.message[:100]}...\nlink:\nhttps://t.me/c/{msg.peer_id.channel_id}/{msg.id}\nTags: {tags}"
             await client.forward_messages(channel_to_forward, msg)
             await client.send_message(channel_to_forward, link_msg)
 
